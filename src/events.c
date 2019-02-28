@@ -127,19 +127,27 @@ void listen_to_joystick(struct action_map *restrict map, char mode) {
         }
 
         for (size_t i = 0; i < nread / sizeof(struct js_event); ++i) {
-            handle_event(events + i);
+            handle_event(events + i, map);
         }
     }
 }
 
-void handle_event(struct js_event *event) {
+void handle_event(struct js_event *event, struct action_map *restrict map) {
     uint8_t axis;
     switch (event->type) {
         case JS_EVENT_BUTTON:
             if (event->value) {
-                printf("button %u down\n", event->number);
+                if (map->button_down[event->number]) {
+                    printf("mapped b%ud %s\n", event->number, map->button_down[event->number]);
+                } else {
+                    printf("unmapped b%ud\n", event->number);
+                }
             } else {
-                printf("button %u up\n", event->number);
+                if (map->button_up[event->number]) {
+                    printf("mapped b%uu %s\n", event->number, map->button_up[event->number]);
+                } else {
+                    printf("unmapped b%uu\n", event->number);
+                }
             }
             break;
         case JS_EVENT_AXIS:
