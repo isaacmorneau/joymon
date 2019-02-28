@@ -111,5 +111,10 @@ int main(int argc, char **argv) {
         wait(0);
     }
 
+    free(interfaces);
+    free((void*)config);
+    for (size_t i = 0; i < total_interfaces; ++i) {
+        close_action_map(map + i);
+    }
     exit(EXIT_SUCCESS);
 }
