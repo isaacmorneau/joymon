@@ -1,10 +1,21 @@
 #pragma once
 #include <linux/joystick.h>
 #include <stdint.h>
-#include "config.h"
+
+struct action_map {
+    uint8_t button_count;
+    uint8_t axis_count;
+    char *name;
+    int fd;
+    char **button_down;
+    char **button_up;
+};
+
+void init_action_map(struct action_map *map);
+void close_action_map(struct action_map *map);
 
 //mode - [d]aemon [r]aw
-void listen_to_joystick(int fd, char mode, struct action_map *map);
+void listen_to_joystick(struct action_map *map, char mode);
 
 //opens js fd or -1 on error
 int open_joystick(const char *name);

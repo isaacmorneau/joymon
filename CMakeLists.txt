@@ -9,8 +9,9 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 #clear defaults
-set(CMAKE_C_FLAGS_DEBUG "")
-set(CMAKE_C_FLAGS_RELEASE "")
+set(CMAKE_C_FLAGS "-Wall -Wextra")
+set(CMAKE_C_FLAGS_DEBUG "-g -O0 -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_C_FLAGS_RELEASE "-Ofast -s -fno-ident  -march=native -flto -DNDEBUG")
 
 #set some standards
 set(CMAKE_C_STANDARD 11)

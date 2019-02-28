@@ -15,6 +15,23 @@ uint8_t button_count;
 
 struct axis_state axes[3] = {{0}};
 
+void init_action_map(struct action_map *map) {
+    if (!(map->button_down = calloc(sizeof(char *), map->button_count))
+        && !(map->button_up = calloc(sizeof(char *), map->button_count))) {
+        perror("malloc()");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void close_action_map(struct action_map *map) {
+    //name isnt allocated in here
+    //dont free it
+    free(map->button_up);
+    map->button_up = NULL;
+    free(map->button_down);
+    map->button_down = NULL;
+}
+
 uint8_t get_axis_count(int fd) {
     uint8_t axes;
 
@@ -63,7 +80,7 @@ int open_joystick(const char *name) {
     return fd;
 }
 
-void listen_to_joystick(int fd, char mode, struct action_map *map) {
+void listen_to_joystick(struct action_map *restrict map, char mode) {
     int ret;
     if ((ret = fork()) < 0) { //>0 its good <0 its bad but we cant do anything about it
         perror("fork()");
@@ -92,8 +109,8 @@ void listen_to_joystick(int fd, char mode, struct action_map *map) {
         }
     }
 
-    axis_count   = get_axis_count(fd);
-    button_count = get_button_count(fd);
+    axis_count   = get_axis_count(map->fd);
+    button_count = get_button_count(map->fd);
 
     if (mode == 'r') {
         printf("axis count: %u\nbutton count: %u\n", axis_count, button_count);
@@ -103,7 +120,7 @@ void listen_to_joystick(int fd, char mode, struct action_map *map) {
 
     while (1) {
         ssize_t nread;
-        nread = read(fd, events, sizeof(struct js_event) * 64);
+        nread = read(map->fd, events, sizeof(struct js_event) * 64);
         if (nread == -1) {
             perror("read()");
             return;

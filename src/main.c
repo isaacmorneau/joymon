@@ -1,4 +1,5 @@
 #include <getopt.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,9 +9,8 @@
 #include "config.h"
 #include "events.h"
 
-size_t total_interfaces = 0;
-const char **interfaces = NULL;
-const char *config      = NULL;
+const char *config = NULL;
+bool config_needs_free  = false;
 
 static void print_help(void) {
     puts(
@@ -34,11 +34,11 @@ int main(int argc, char **argv) {
     while (1) {
         int option_index = 0;
 
-        static struct option long_options[] = {{"config", required_argument, 0, 'c'},
-            {"daemon", no_argument, 0, 'd'}, {"raw", no_argument, 0, 'r'},
-            {"interface", required_argument, 0, 'i'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
+        static struct option long_options[]
+            = {{"config", required_argument, 0, 'c'}, {"daemon", no_argument, 0, 'd'},
+                {"raw", no_argument, 0, 'r'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
 
-        c = getopt_long(argc, argv, "i:c:drh", long_options, &option_index);
+        c = getopt_long(argc, argv, "c:drh", long_options, &option_index);
         if (c == -1)
             break;
 
@@ -51,27 +51,7 @@ int main(int argc, char **argv) {
                 break;
             case 'c':
                 config = optarg;
-                printf("config not yet implemented\n");
-                exit(EXIT_FAILURE);
                 break;
-            case 'i':
-                ++total_interfaces;
-
-                if (interfaces == NULL && !(interfaces = malloc(sizeof(char *)))) {
-                    perror("malloc");
-                    exit(EXIT_FAILURE);
-                } else {
-                    if (!(interfaces = realloc(interfaces, sizeof(char *) * total_interfaces))) {
-                        perror("malloc");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-
-                interfaces[total_interfaces - 1] = optarg;
-
-                printf("using interface '%s'\n", optarg);
-                break;
-
             case 'h':
             case '?':
                 print_help();
@@ -91,30 +71,27 @@ int main(int argc, char **argv) {
             printf("failed to find config path ensure either XDG_CONFIG_HOME or HOME is set.\n");
             exit(EXIT_FAILURE);
         }
+        config_needs_free = true;
     }
 
-    struct action_map map[total_interfaces];
+    struct action_map *map = NULL;
+    size_t total_actions   = 0;
+    if (generate_map(config, &map, &total_actions)) {
+        printf("failed to generate action map, check config\n");
+        exit(EXIT_FAILURE);
+    }
 
-    for (size_t i = 0; i < total_interfaces; ++i) {
-        printf("listening to: %s\n", interfaces[i]);
-        int tfd = open_joystick(interfaces[i]);
-        if (tfd != -1) {
-            uint8_t btns = get_button_count(tfd);
-            init_action_map(map + i, btns);
-            listen_to_joystick(tfd, mode, map + i);
-        } else {
-            printf("unable to use %s, ignoring\n", interfaces[i]);
-        }
+    for (size_t i = 0; i < total_actions; ++i) {
+        listen_to_joystick(map + i, mode);
     }
 
     if (mode == 'r') {
         wait(0);
     }
 
-    free(interfaces);
-    free((void*)config);
-    for (size_t i = 0; i < total_interfaces; ++i) {
-        close_action_map(map + i);
+    if (config_needs_free) {
+        free((void *)config);
     }
+
     exit(EXIT_SUCCESS);
 }

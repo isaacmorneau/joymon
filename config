@@ -1,0 +1,7 @@
+>/dev/input/js0
+b0u=notify-send "js0 btn0"
+b1u=notify-send "js0 btn1"
+
+>/dev/input/js1
+b0u=notify-send "js1 btn0"
+b1u=notify-send "js1 btn1"
