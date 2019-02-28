@@ -58,15 +58,14 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
     char event;
     while ((nread = getline(&line, &len, conf)) != -1) {
         memset(tmp, 0, 4096);
-        if (len == 0) {
+        if (nread <= 1) {
             continue;
         }
 
         //dont terminate with newlines
-        if (len > 1) {
-            line[len - 2] = '\0';
+        if (nread > 1) {
+            line[nread-1] = '\0';
         }
-        printf("read line '%s'\n", line);
 
         if (*line == '>') { //its a label
             //allocate the map
@@ -80,7 +79,8 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                 perror("realloc()");
                 goto error_cleanup;
             }
-            lm = *map + *total_actions - 1;
+
+            lm = &(*map)[*total_actions - 1];
             //copy the name
             if (!(lm->name = strdup(line + 1))) {
                 perror("strdup()");
@@ -105,18 +105,18 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
             init_action_map(lm);
 
         } else if (*total_actions
-            && sscanf(line, "%c%hhd%c=%s", &type, &value, &event, tmp) == 4) { //its a label
+            && sscanf(line, "%c%hhd%c=%4095s", &type, &value, &event, tmp) == 4) { //its a label
             if (type == 'b') {
                 if (value < 0 && value > lm->button_count) {
                     printf("%s value out of range\n", line);
                 }
                 if (event == 'd') {
-                    if (!(lm->button_down[value] = strdup(tmp))) {
+                    if (!(lm->button_down[value] = strdup(line+4))) {
                         perror("strdup()");
                         goto error_cleanup;
                     }
                 } else if (event == 'u') {
-                    if (!(lm->button_up[value] = strdup(tmp))) {
+                    if (!(lm->button_up[value] = strdup(line+4))) {
                         perror("strdup()");
                         goto error_cleanup;
                     }
@@ -141,7 +141,7 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
 error_cleanup:
     fclose(conf);
     free(line);
-    if (*total_actions) {
+    if (*total_actions && *map) {
         for (size_t i = 0; i < *total_actions; ++i) {
             if ((*map)[i].name) {
                 free((*map)[i].name);

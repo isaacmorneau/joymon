@@ -17,7 +17,7 @@ struct axis_state axes[3] = {{0}};
 
 void init_action_map(struct action_map *map) {
     if (!(map->button_down = calloc(sizeof(char *), map->button_count))
-        && !(map->button_up = calloc(sizeof(char *), map->button_count))) {
+        || !(map->button_up = calloc(sizeof(char *), map->button_count))) {
         perror("malloc()");
         exit(EXIT_FAILURE);
     }
