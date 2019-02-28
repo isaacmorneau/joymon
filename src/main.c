@@ -3,14 +3,14 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 
-#include "events.h"
 #include "config.h"
+#include "events.h"
 
 size_t total_interfaces = 0;
-const char **interfaces       = NULL;
-const char * config = NULL;
-
+const char **interfaces = NULL;
+const char *config      = NULL;
 
 static void print_help(void) {
     puts(
@@ -88,14 +88,27 @@ int main(int argc, char **argv) {
 
     if (!config) {
         if (!(config = get_config_path())) {
-            printf("failed to find config directory");
+            printf("failed to find config path ensure either XDG_CONFIG_HOME or HOME is set.\n");
             exit(EXIT_FAILURE);
         }
     }
 
+    struct action_map map[total_interfaces];
+
     for (size_t i = 0; i < total_interfaces; ++i) {
         printf("listening to: %s\n", interfaces[i]);
-        listen_to_joystick(interfaces[i], mode);
+        int tfd = open_joystick(interfaces[i]);
+        if (tfd != -1) {
+            uint8_t btns = get_button_count(tfd);
+            init_action_map(map + i, btns);
+            listen_to_joystick(tfd, mode, map + i);
+        } else {
+            printf("unable to use %s, ignoring\n", interfaces[i]);
+        }
+    }
+
+    if (mode == 'r') {
+        wait(0);
     }
 
     exit(EXIT_SUCCESS);

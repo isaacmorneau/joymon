@@ -13,4 +13,6 @@ void close_action_map(struct action_map * map);
 
 //resolves ~/.config/joymon/config
 //result if not null needs freeing
-char * get_config_path();
+const char * get_config_path();
+
+void generate_map(const char * config, struct action_map * map);

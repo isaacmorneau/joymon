@@ -53,18 +53,28 @@ uint8_t get_axis_state(struct js_event *event, struct axis_state axes[3]) {
     return axis;
 }
 
-void listen_to_joystick(const char *path, char mode) {
-    if (mode == 'd') {
-        int ret;
-        if ((ret = fork()) < 0) { //>0 its good <0 its bad but we cant do anything about it
-            perror("fork()");
-            return;
-        } else if (ret < 0) {
-            //parent success
-            return;
-        }
-        //child
+int open_joystick(const char *name) {
+    int fd;
 
+    if ((fd = open(name, O_RDONLY)) == -1) {
+        perror("open()");
+        return -1;
+    }
+    return fd;
+}
+
+void listen_to_joystick(int fd, char mode, struct action_map *map) {
+    int ret;
+    if ((ret = fork()) < 0) { //>0 its good <0 its bad but we cant do anything about it
+        perror("fork()");
+        return;
+    } else if (ret > 0) {
+        //parent success
+        return;
+    }
+    //child
+
+    if (mode == 'd') {
         umask(0);
 
         fclose(stdin);
@@ -82,15 +92,8 @@ void listen_to_joystick(const char *path, char mode) {
         }
     }
 
-    int jsfd;
-
-    if ((jsfd = open(path, O_RDONLY)) == -1) {
-        perror("open()");
-        return;
-    }
-
-    axis_count   = get_axis_count(jsfd);
-    button_count = get_button_count(jsfd);
+    axis_count   = get_axis_count(fd);
+    button_count = get_button_count(fd);
 
     if (mode == 'r') {
         printf("axis count: %u\nbutton count: %u\n", axis_count, button_count);
@@ -100,7 +103,7 @@ void listen_to_joystick(const char *path, char mode) {
 
     while (1) {
         ssize_t nread;
-        nread = read(jsfd, events, sizeof(struct js_event) * 64);
+        nread = read(fd, events, sizeof(struct js_event) * 64);
         if (nread == -1) {
             perror("read()");
             return;

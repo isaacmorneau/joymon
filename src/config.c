@@ -22,10 +22,11 @@ void close_action_map(struct action_map *map) {
     map->button_down = NULL;
 }
 
-char *get_config_path() {
+const char *get_config_path() {
     char *home;
     char *fullpath;
     size_t len;
+
     if ((home = getenv("XDG_CONFIG_HOME"))) {
         len = strlen(home) + strlen(CONFIG_EXT) + 1;
         if (!(fullpath = malloc(len))) {
@@ -45,5 +46,10 @@ char *get_config_path() {
     } else {
         return NULL;
     }
+
     return fullpath;
+}
+
+void generate_map(const char *config, struct action_map * map) {
+
 }

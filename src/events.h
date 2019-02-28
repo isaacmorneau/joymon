@@ -1,9 +1,13 @@
 #pragma once
 #include <linux/joystick.h>
 #include <stdint.h>
+#include "config.h"
 
 //mode - [d]aemon [r]aw
-void listen_to_joystick(const char *path, char mode);
+void listen_to_joystick(int fd, char mode, struct action_map *map);
+
+//opens js fd or -1 on error
+int open_joystick(const char *name);
 
 void handle_event(struct js_event *event);
 
