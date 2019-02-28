@@ -13,7 +13,7 @@
 uint8_t axis_count;
 uint8_t button_count;
 
-struct axis_state axes[3] = {0};
+struct axis_state axes[3] = {{0}};
 
 uint8_t get_axis_count(int fd) {
     uint8_t axes;

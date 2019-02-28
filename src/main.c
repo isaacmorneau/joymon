@@ -5,9 +5,12 @@
 #include <stdlib.h>
 
 #include "events.h"
+#include "config.h"
 
 size_t total_interfaces = 0;
-char **interfaces       = NULL;
+const char **interfaces       = NULL;
+const char * config = NULL;
+
 
 static void print_help(void) {
     puts(
@@ -47,6 +50,7 @@ int main(int argc, char **argv) {
                 mode = 'r';
                 break;
             case 'c':
+                config = optarg;
                 printf("config not yet implemented\n");
                 exit(EXIT_FAILURE);
                 break;
@@ -80,6 +84,13 @@ int main(int argc, char **argv) {
         printf("ignoring args: ");
         while (optind < argc) printf("%s ", argv[optind++]);
         printf("\n");
+    }
+
+    if (!config) {
+        if (!(config = get_config_path())) {
+            printf("failed to find config directory");
+            exit(EXIT_FAILURE);
+        }
     }
 
     for (size_t i = 0; i < total_interfaces; ++i) {

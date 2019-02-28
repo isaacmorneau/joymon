@@ -54,6 +54,7 @@ endif()
 set(joymon_SOURCES
     "src/main.c"
     "src/events.c"
+    "src/config.c"
     )
 add_executable(joymon ${joymon_SOURCES})
 
