@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "events.h"
+
 size_t total_interfaces = 0;
 char **interfaces       = NULL;
 
@@ -11,11 +13,14 @@ static void print_help(void) {
     puts(
         "joymon - a simple daemon to respond to joystick events\n"
         "-[-i]nterface - the /dev/input/js# device to read from. can be specificed multiple times\n"
+        "-[-d]aemonize - run in the background\n"
+        "-[-r]aw - dump all event information to the console. useful for finding keycodes\n"
         "-[-c]onfig - defaults to XDG_CONFIG_HOME/joymon/config\n"
         "-[-h]elp - this message");
 }
 
 int main(int argc, char **argv) {
+    char mode = 'r';
     if (argc == 1) {
         print_help();
         exit(EXIT_SUCCESS);
@@ -27,13 +32,20 @@ int main(int argc, char **argv) {
         int option_index = 0;
 
         static struct option long_options[] = {{"config", required_argument, 0, 'c'},
+            {"daemon", no_argument, 0, 'd'}, {"raw", no_argument, 0, 'r'},
             {"interface", required_argument, 0, 'i'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
 
-        c = getopt_long(argc, argv, "i:c:h", long_options, &option_index);
+        c = getopt_long(argc, argv, "i:c:drh", long_options, &option_index);
         if (c == -1)
             break;
 
         switch (c) {
+            case 'd':
+                mode = 'd';
+                break;
+            case 'r':
+                mode = 'r';
+                break;
             case 'c':
                 printf("config not yet implemented\n");
                 exit(EXIT_FAILURE);
@@ -72,6 +84,7 @@ int main(int argc, char **argv) {
 
     for (size_t i = 0; i < total_interfaces; ++i) {
         printf("listening to: %s\n", interfaces[i]);
+        listen_to_joystick(interfaces[i], mode);
     }
 
     exit(EXIT_SUCCESS);

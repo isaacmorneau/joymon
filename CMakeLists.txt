@@ -52,7 +52,9 @@ endif()
 
 #joymon specific configuration
 set(joymon_SOURCES
-    "src/main.c")
+    "src/main.c"
+    "src/events.c"
+    )
 add_executable(joymon ${joymon_SOURCES})
 
 set(joymon_DEBUG -masm=intel -Wall -Wextra -Wno-unknown-pragmas -g -O0 -fsanitize=address -fno-omit-frame-pointer)
