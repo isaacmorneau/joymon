@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <limits.h>
 #include <linux/joystick.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -9,48 +10,44 @@
 
 #include "events.h"
 
-uint8_t axis;
 uint8_t axis_count;
 uint8_t button_count;
 
 struct axis_state axes[3] = {0};
 
-
 uint8_t get_axis_count(int fd) {
     uint8_t axes;
 
-    if (ioctl(fd, JSIOCGAXES, &axes) == -1)
+    if (ioctl(fd, JSIOCGAXES, &axes) == -1) {
+        perror("ioctl()");
         return 0;
+    }
 
     return axes;
 }
 
 uint8_t get_button_count(int fd) {
     uint8_t buttons;
-    if (ioctl(fd, JSIOCGBUTTONS, &buttons) == -1)
+    if (ioctl(fd, JSIOCGBUTTONS, &buttons) == -1) {
+        perror("ioctl()");
         return 0;
+    }
 
     return buttons;
 }
 
-
-/**
- * Keeps track of the current axis state.
- *
- * NOTE: This function assumes that axes are numbered starting from 0, and that
- * the X axis is an even number, and the Y axis is an odd number. However, this
- * is usually a safe assumption.
- *
- * Returns the axis that the event indicated.
- */
+//https://www.kernel.org/doc/Documentation/input/joystick-api.txt
+//as per js_event.number its safe to assume x is even and y is odd
 uint8_t get_axis_state(struct js_event *event, struct axis_state axes[3]) {
+    //get axis, number 0 and 1 both are axis 0
     uint8_t axis = event->number / 2;
 
     if (axis < 3) {
-        if (event->number % 2 == 0)
-            axes[axis].x = event->value;
-        else
+        if (event->number % 2) {
             axes[axis].y = event->value;
+        } else {
+            axes[axis].x = event->value;
+        }
     }
 
     return axis;
@@ -92,14 +89,12 @@ void listen_to_joystick(const char *path, char mode) {
         return;
     }
 
-
-    axis_count = get_axis_count(jsfd);
+    axis_count   = get_axis_count(jsfd);
     button_count = get_button_count(jsfd);
 
     if (mode == 'r') {
         printf("axis count: %u\nbutton count: %u\n", axis_count, button_count);
     }
-
 
     struct js_event events[64];
 
@@ -118,15 +113,39 @@ void listen_to_joystick(const char *path, char mode) {
 }
 
 void handle_event(struct js_event *event) {
+    uint8_t axis;
     switch (event->type) {
         case JS_EVENT_BUTTON:
-            printf("Button %u %s\n", event->number, event->value ? "pressed" : "released");
+            if (event->value) {
+                printf("button %u down\n", event->number);
+            } else {
+                printf("button %u up\n", event->number);
+            }
             break;
         case JS_EVENT_AXIS:
-            axis = get_axis_state(&event, axes);
-            if (axis < 3)
-                printf("Axis %u at (%6d, %6d)\n", axis, axes[axis].x, axes[axis].y);
+            axis = get_axis_state(event, axes);
+            if (axis < 3) {
+                printf("axis %u ", axis);
+
+                if (!axes[axis].x && !axes[axis].y) {
+                    printf("centered\n");
+                } else {
+                    if (axes[axis].x == SHRT_MAX) {
+                        printf("(max, ");
+                    } else if (axes[axis].x == -SHRT_MAX) {
+                        printf("(min, ");
+                    } else {
+                        printf("(%d, ", axes[axis].x);
+                    }
+                    if (axes[axis].y == SHRT_MAX) {
+                        printf("max)\n");
+                    } else if (axes[axis].y == -SHRT_MAX) {
+                        printf("min)\n");
+                    } else {
+                        printf("%d)\n", axes[axis].y);
+                    }
+                }
+            }
             break;
     }
 }
-
