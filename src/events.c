@@ -139,12 +139,14 @@ void handle_event(struct js_event *event, struct action_map *restrict map) {
             if (event->value) {
                 if (map->button_down[event->number]) {
                     printf("mapped b%ud %s\n", event->number, map->button_down[event->number]);
+                    system(map->button_down[event->number]);
                 } else {
                     printf("unmapped b%ud\n", event->number);
                 }
             } else {
                 if (map->button_up[event->number]) {
                     printf("mapped b%uu %s\n", event->number, map->button_up[event->number]);
+                    system(map->button_up[event->number]);
                 } else {
                     printf("unmapped b%uu\n", event->number);
                 }
