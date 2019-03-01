@@ -127,53 +127,55 @@ void listen_to_joystick(struct action_map *restrict map, char mode) {
         }
 
         for (size_t i = 0; i < nread / sizeof(struct js_event); ++i) {
-            handle_event(events + i, map);
+            handle_event(events + i, map, mode);
         }
     }
 }
 
-void handle_event(struct js_event *event, struct action_map *restrict map) {
+void handle_event(struct js_event *event, struct action_map *restrict map, char mode) {
     uint8_t axis;
     switch (event->type) {
         case JS_EVENT_BUTTON:
             if (event->value) {
-                if (map->button_down[event->number]) {
-                    printf("mapped b%ud %s\n", event->number, map->button_down[event->number]);
-                    system(map->button_down[event->number]);
+                if (mode == 'r') {
+                    printf("b%ud\n", event->number);
                 } else {
-                    printf("unmapped b%ud\n", event->number);
+                    system(map->button_down[event->number]);
                 }
             } else {
-                if (map->button_up[event->number]) {
-                    printf("mapped b%uu %s\n", event->number, map->button_up[event->number]);
-                    system(map->button_up[event->number]);
+                if (mode == 'r') {
+                    printf("b%uu\n", event->number);
                 } else {
-                    printf("unmapped b%uu\n", event->number);
+                    system(map->button_up[event->number]);
                 }
             }
             break;
         case JS_EVENT_AXIS:
             axis = get_axis_state(event, axes);
             if (axis < 3) {
-                printf("axis %u ", axis);
+                if (mode == 'r') {
+                    printf("axis %u ", axis);
 
-                if (!axes[axis].x && !axes[axis].y) {
-                    printf("centered\n");
+                    if (!axes[axis].x && !axes[axis].y) {
+                        printf("centered\n");
+                    } else {
+                        if (axes[axis].x == SHRT_MAX) {
+                            printf("(max, ");
+                        } else if (axes[axis].x == -SHRT_MAX) {
+                            printf("(min, ");
+                        } else {
+                            printf("(%d, ", axes[axis].x);
+                        }
+                        if (axes[axis].y == SHRT_MAX) {
+                            printf("max)\n");
+                        } else if (axes[axis].y == -SHRT_MAX) {
+                            printf("min)\n");
+                        } else {
+                            printf("%d)\n", axes[axis].y);
+                        }
+                    }
                 } else {
-                    if (axes[axis].x == SHRT_MAX) {
-                        printf("(max, ");
-                    } else if (axes[axis].x == -SHRT_MAX) {
-                        printf("(min, ");
-                    } else {
-                        printf("(%d, ", axes[axis].x);
-                    }
-                    if (axes[axis].y == SHRT_MAX) {
-                        printf("max)\n");
-                    } else if (axes[axis].y == -SHRT_MAX) {
-                        printf("min)\n");
-                    } else {
-                        printf("%d)\n", axes[axis].y);
-                    }
+                    //nothing yet but map to exec calls
                 }
             }
             break;

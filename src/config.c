@@ -1,3 +1,5 @@
+#include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,115 +41,157 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
     *total_actions = 0;
     *map           = NULL;
 
-    FILE *conf = fopen(config, "r");
-    if (!conf) {
-        perror("fopen()");
+    const char *config_buf = NULL;
+    size_t config_len      = 0;
+
+    {
+        FILE *conf;
+        if (!(conf = fopen(config, "r"))) {
+            perror("fopen()");
+            return -1;
+        }
+
+        char *tmp;
+        size_t tmplen;
+        if (readall(conf, &tmp, &tmplen)) {
+            return -1;
+        }
+
+        if (fclose(conf)) {
+            //how do you fail to close a file?
+            perror("fclose");
+            free(tmp);
+            return -1;
+        }
+
+        //dont change anything
+        config_buf = tmp;
+        config_len = tmplen;
+    }
+
+    struct action_map *lm = NULL;
+    size_t lm_len         = 0;
+
+    for (size_t i = 0; i < config_len; ++i) {
+        if (!strncmp(config_buf + i, C_JOYSTICK, strlen(C_JOYSTICK))) {
+            //skip whitespace and token
+            for (i += strlen(C_JOYSTICK); i < config_len; ++i)
+                if (!isspace(config_buf[i]))
+                    break;
+            size_t pstart = i;
+            //collect path
+            for (; i < config_len; ++i)
+                if (config_buf[i] == ';' || isspace(config_buf[i]))
+                    break;
+            size_t pend = i;
+
+            //make sure they didnt screw up the config
+            if (i == config_len || config_buf[i] != ';') {
+                fputs("unterminated joystick directive\n", stderr);
+                if (lm_len)
+                    free(lm);
+                free((void *)config_buf);
+                return -1;
+            }
+
+            //new joystick is a new map
+            void *tmp;
+            if (!lm_len++ && !(lm = malloc(sizeof(struct action_map)))) {
+                perror("malloc()");
+                if (lm_len)
+                    free(lm);
+                free((void *)config_buf);
+                return -1;
+            } else if (!(tmp = realloc(lm, sizeof(struct action_map) * lm_len))) {
+                perror("malloc()");
+                if (lm_len)
+                    free(lm);
+                free((void *)config_buf);
+                return -1;
+            } else {
+                lm = tmp;
+            }
+
+            if (!(lm[lm_len - 1].name = strndup(config_buf + pstart, pend - pstart))) {
+                perror("strndup()");
+                free(lm);
+                free((void *)config_buf);
+                return -1;
+            }
+
+            if (!(lm[lm_len - 1].fd = open_joystick(lm[lm_len - 1].name))) {
+                perror("open()");
+                free(lm);
+                free((void *)config_buf);
+                return -1;
+            }
+            printf("joystick: %s\n", lm[lm_len - 1].name);
+        }
+    }
+
+    *map           = lm;
+    *total_actions = lm_len;
+    free((void *)config_buf);
+    return 0;
+}
+
+int readall(FILE *in, char **dataptr, size_t *sizeptr) {
+    char *data  = NULL, *temp;
+    size_t size = 0;
+    size_t used = 0;
+    size_t n;
+
+    if (in == NULL || dataptr == NULL || sizeptr == NULL) {
         return -1;
     }
 
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t nread;
+    //a read error already occurred
+    if (ferror(in)) {
+        return -1;
+    }
 
-    struct action_map *lm = NULL;
+    while (1) {
+        if (used + READALL_CHUNK + 1 > size) {
+            size = used + READALL_CHUNK + 1;
+            //overflow check
+            if (size <= used) {
+                free(data);
+                return -1;
+            }
 
-    //scanf vars
-    char tmp[4096];
-    char type;
-    int8_t value;
-    char event;
-    while ((nread = getline(&line, &len, conf)) != -1) {
-        memset(tmp, 0, 4096);
-        if (nread <= 1) {
-            continue;
-        }
-
-        //dont terminate with newlines
-        if (nread > 1) {
-            line[nread-1] = '\0';
-        }
-
-        if (*line == '>') { //its a label
-            //allocate the map
-            if (!*total_actions) {
-                ++*total_actions;
-                if (!(*map = calloc(sizeof(struct action_map), 1))) {
-                    perror("calloc()");
-                    goto error_cleanup;
-                }
-            } else if (!(*map = realloc(*map, sizeof(struct action_map) * ++*total_actions))) {
+            if (!(temp = realloc(data, size))) {
                 perror("realloc()");
-                goto error_cleanup;
+                free(data);
+                return -1;
             }
-
-            lm = &(*map)[*total_actions - 1];
-            //copy the name
-            if (!(lm->name = strdup(line + 1))) {
-                perror("strdup()");
-                goto error_cleanup;
-            }
-            //open the joystick
-            if ((lm->fd = open_joystick(lm->name)) == -1) {
-                printf("unable to open joystick '%s'\n", lm->name);
-                goto error_cleanup;
-            }
-            //get the buttons
-            if (!(lm->button_count = get_button_count(lm->fd))) {
-                printf("unable to read button count%s\n", lm->name);
-                goto error_cleanup;
-            }
-            //get the axis
-            if (!(lm->axis_count = get_axis_count(lm->fd))) {
-                printf("unable to read axis count%s\n", lm->name);
-                goto error_cleanup;
-            }
-            //alloc the buffers
-            init_action_map(lm);
-
-        } else if (*total_actions
-            && sscanf(line, "%c%hhd%c=%4095s", &type, &value, &event, tmp) == 4) { //its a label
-            if (type == 'b') {
-                if (value < 0 && value > lm->button_count) {
-                    printf("%s value out of range\n", line);
-                }
-                if (event == 'd') {
-                    if (!(lm->button_down[value] = strdup(line+4))) {
-                        perror("strdup()");
-                        goto error_cleanup;
-                    }
-                } else if (event == 'u') {
-                    if (!(lm->button_up[value] = strdup(line+4))) {
-                        perror("strdup()");
-                        goto error_cleanup;
-                    }
-                } else {
-                    printf("%s event not recognized\n", line);
-                }
-            } else if (type == 'a') {
-                //TODO implement axis events
-                continue;
-            } else {
-                printf("%s type not recognized\n", line);
-            }
-        } else {
-            printf("%s line unparseable\n", line);
+            data = temp;
         }
+
+        if (!(n = fread(data + used, 1, READALL_CHUNK, in))) {
+            break;
+        }
+
+        used += n;
     }
 
-    fclose(conf);
-    free(line);
+    if (ferror(in)) {
+        perror("fread()");
+        free(data);
+        return -1;
+    }
+
+    //resize down
+    if (!(temp = realloc(data, used + 1))) {
+        perror("realloc()");
+        free(data);
+        return -1;
+    }
+
+    data       = temp;
+    data[used] = '\0';
+
+    *dataptr = data;
+    *sizeptr = used;
+
     return 0;
-
-error_cleanup:
-    fclose(conf);
-    free(line);
-    if (*total_actions && *map) {
-        for (size_t i = 0; i < *total_actions; ++i) {
-            if ((*map)[i].name) {
-                free((*map)[i].name);
-            }
-        }
-        free(*map);
-    }
-    return -1;
 }

@@ -20,7 +20,7 @@ void listen_to_joystick(struct action_map *map, char mode);
 //opens js fd or -1 on error
 int open_joystick(const char *name);
 
-void handle_event(struct js_event *event, struct action_map *map);
+void handle_event(struct js_event *event, struct action_map *map, char mode);
 
 struct axis_state {
     int16_t x, y;
