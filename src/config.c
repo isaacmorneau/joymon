@@ -88,44 +88,40 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
             //make sure they didnt screw up the config
             if (i == config_len || config_buf[i] != ';') {
                 fputs("unterminated joystick directive\n", stderr);
-                if (lm_len)
-                    free(lm);
-                free((void *)config_buf);
-                return -1;
+                goto error_cleanup;
             }
 
             //new joystick is a new map
             void *tmp;
             if (!lm_len++ && !(lm = malloc(sizeof(struct action_map)))) {
                 perror("malloc()");
-                if (lm_len)
-                    free(lm);
-                free((void *)config_buf);
-                return -1;
+                goto error_cleanup;
             } else if (!(tmp = realloc(lm, sizeof(struct action_map) * lm_len))) {
                 perror("malloc()");
-                if (lm_len)
-                    free(lm);
-                free((void *)config_buf);
-                return -1;
+                goto error_cleanup;
             } else {
                 lm = tmp;
             }
 
             if (!(lm[lm_len - 1].name = strndup(config_buf + pstart, pend - pstart))) {
                 perror("strndup()");
-                free(lm);
-                free((void *)config_buf);
-                return -1;
+                goto error_cleanup;
             }
 
             if (!(lm[lm_len - 1].fd = open_joystick(lm[lm_len - 1].name))) {
-                perror("open()");
-                free(lm);
-                free((void *)config_buf);
-                return -1;
+                goto error_cleanup;
             }
-            printf("joystick: %s\n", lm[lm_len - 1].name);
+
+            if (!(lm[lm_len - 1].button_count= get_button_count(lm[lm_len - 1].fd))) {
+                goto error_cleanup;
+            }
+
+            if (!(lm[lm_len - 1].axis_count = get_axis_count(lm[lm_len - 1].fd))) {
+                goto error_cleanup;
+            }
+
+            printf("joystick: %s\nbuttons: %u axis: %u\n", lm[lm_len - 1].name,
+                lm[lm_len - 1].button_count, lm[lm_len - 1].axis_count);
         }
     }
 
@@ -133,6 +129,12 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
     *total_actions = lm_len;
     free((void *)config_buf);
     return 0;
+
+error_cleanup:
+    if (lm_len)
+        free(lm);
+    free((void *)config_buf);
+    return -1;
 }
 
 int readall(FILE *in, char **dataptr, size_t *sizeptr) {
