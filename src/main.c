@@ -34,17 +34,20 @@ int main(int argc, char **argv) {
     while (1) {
         int option_index = 0;
 
-        static struct option long_options[]
-            = {{"config", required_argument, 0, 'c'}, {"daemon", no_argument, 0, 'd'},
-                {"raw", no_argument, 0, 'r'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
+        static struct option long_options[] = {{"config", required_argument, 0, 'c'},
+            {"daemon", no_argument, 0, 'd'}, {"test", no_argument, 0, 't'},
+            {"raw", no_argument, 0, 'r'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
 
-        c = getopt_long(argc, argv, "c:drh", long_options, &option_index);
+        c = getopt_long(argc, argv, "c:drth", long_options, &option_index);
         if (c == -1)
             break;
 
         switch (c) {
             case 'd':
                 mode = 'd';
+                break;
+            case 't':
+                mode = 't';
                 break;
             case 'r':
                 mode = 'r';
@@ -55,7 +58,7 @@ int main(int argc, char **argv) {
             case 'h':
             case '?':
                 print_help();
-                break;
+                exit(EXIT_SUCCESS);
         }
     }
 
@@ -84,17 +87,23 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
+    if (config_needs_free) {
+        free((void *)config);
+    }
+
+
     for (size_t i = 0; i < total_actions; ++i) {
         listen_to_joystick(map + i, mode);
     }
 
-    if (mode == 'r') {
+    if (mode == 'r' || mode == 't') {
         wait(0);
+    } else if (mode == 'd') { //youre the parent, clean up
+        for (size_t i = 0; i < total_actions; ++i) {
+            close_action_map(map+i);
+        }
     }
 
-    if (config_needs_free) {
-        free((void *)config);
-    }
 
     if (map) {
         free(map);

@@ -24,12 +24,24 @@ void init_action_map(struct action_map *map) {
 }
 
 void close_action_map(struct action_map *map) {
-    //name isnt allocated in here
-    //dont free it
-    free(map->button_up);
-    map->button_up = NULL;
-    free(map->button_down);
-    map->button_down = NULL;
+    if (map->name) {
+        free(map->name);
+    }
+    if (map->button_up) {
+        for (size_t i = 0; i < map->button_count; ++i)
+            if (map->button_up[i])
+                free(map->button_up[i]);
+
+        free(map->button_up);
+        map->button_up = NULL;
+    }
+    if (map->button_down) {
+        for (size_t i = 0; i < map->button_count; ++i)
+            if (map->button_down[i])
+                free(map->button_down[i]);
+        free(map->button_down);
+        map->button_down = NULL;
+    }
 }
 
 uint8_t get_axis_count(int fd) {
@@ -113,7 +125,8 @@ void listen_to_joystick(struct action_map *restrict map, char mode) {
     button_count = get_button_count(map->fd);
 
     if (mode == 'r') {
-        printf("axis count: %u\nbutton count: %u\n", axis_count, button_count);
+        printf("joystock: %s\naxis count: %u\nbutton count: %u\n", map->name, axis_count,
+            button_count);
     }
 
     struct js_event events[64];
