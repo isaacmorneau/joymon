@@ -1,7 +1,8 @@
->/dev/input/js0
-b0u=notify-send "js0 btn0"
-b1u=notify-send "js0 btn1"
+#main stick
+joystick /dev/input/js0;
 
->/dev/input/js1
-b0u=notify-send "js1 btn0"
-b1u=notify-send "js1 btn1"
+#throttle
+joystick /dev/input/js1;
+
+button 1 down exec i3-msg -t command 'workspace prev';
+button 2 down exec i3-msg -t command 'workspace next';
