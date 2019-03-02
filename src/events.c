@@ -198,13 +198,13 @@ void handle_event(struct js_event *event, struct action_map *restrict map, char 
         case JS_EVENT_BUTTON:
             if (event->value) {
                 if (mode == 'r') {
-                    printf("b%ud\n", event->number);
+                    printf("button %u down\n", event->number);
                 } else if (map->button_down[event->number]) {
                     system(map->button_down[event->number]);
                 }
             } else {
                 if (mode == 'r') {
-                    printf("b%uu\n", event->number);
+                    printf("button %u up\n", event->number);
                 } else if (map->button_up[event->number]) {
                     system(map->button_up[event->number]);
                 }
@@ -214,36 +214,21 @@ void handle_event(struct js_event *event, struct action_map *restrict map, char 
             axis = get_axis_state(event, axes);
             if (axis < 3) {
                 if (mode == 'r') {
-                    printf("axis %u ", axis);
-
-                    if (!axes[axis].x && !axes[axis].y) {
-                        printf("centered\n");
-                    } else {
-                        if (axes[axis].x == SHRT_MAX) {
-                            printf("(max, ");
-                        } else if (axes[axis].x == -SHRT_MAX) {
-                            printf("(min, ");
-                        } else {
-                            printf("(%d, ", axes[axis].x);
-                        }
-                        if (axes[axis].y == SHRT_MAX) {
-                            printf("max)\n");
-                        } else if (axes[axis].y == -SHRT_MAX) {
-                            printf("min)\n");
-                        } else {
-                            printf("%d)\n", axes[axis].y);
-                        }
-                    }
+                    printf("axis %u (%d, %d)\n", axis, axes[axis].x, axes[axis].y);
                 } else {
-                    if (axes[axis].x < 0 && map->axis_x_neg_tol[axis] && axes[axis].x < *map->axis_x_neg_tol[axis]) {
+                    if (axes[axis].x < 0 && map->axis_x_neg_tol[axis]
+                        && axes[axis].x < *map->axis_x_neg_tol[axis]) {
                         system(map->axis_x_neg[axis]);
-                    } else if (axes[axis].x > 0 && map->axis_x_pos_tol[axis] && axes[axis].x > *map->axis_x_pos_tol[axis]) {
+                    } else if (axes[axis].x > 0 && map->axis_x_pos_tol[axis]
+                        && axes[axis].x > *map->axis_x_pos_tol[axis]) {
                         system(map->axis_x_pos[axis]);
                     }
 
-                    if (axes[axis].y < 0 && map->axis_y_neg_tol[axis] && axes[axis].y < *map->axis_y_neg_tol[axis]) {
+                    if (axes[axis].y < 0 && map->axis_y_neg_tol[axis]
+                        && axes[axis].y < *map->axis_y_neg_tol[axis]) {
                         system(map->axis_y_neg[axis]);
-                    } else if (axes[axis].y > 0 && map->axis_y_pos_tol[axis] && axes[axis].y > *map->axis_y_pos_tol[axis]) {
+                    } else if (axes[axis].y > 0 && map->axis_y_pos_tol[axis]
+                        && axes[axis].y > *map->axis_y_pos_tol[axis]) {
                         system(map->axis_y_pos[axis]);
                     }
                 }
