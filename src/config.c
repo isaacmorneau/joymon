@@ -73,6 +73,11 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
     size_t lm_len         = 0;
 
     for (size_t i = 0; i < config_len; ++i) {
+        //skip whitespace
+        for (; i < config_len; ++i)
+            if (!isspace(config_buf[i]))
+                break;
+
         //skip comments
         if (config_buf[i] == '#')
             for (; i < config_len; ++i)
@@ -84,6 +89,7 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
             if (!isspace(config_buf[i]))
                 break;
 
+        //joystick directive
         if (!strncmp(config_buf + i, C_JOYSTICK, strlen(C_JOYSTICK))) {
             //skip whitespace and token
             for (i += strlen(C_JOYSTICK); i < config_len; ++i)
@@ -128,6 +134,7 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
             }
             init_action_map(lm + lm_len - 1);
 
+            //button directive
         } else if (!strncmp(config_buf + i, C_BUTTON, strlen(C_BUTTON))) {
             //skip whitespace and token
             for (i += strlen(C_BUTTON); i < config_len; ++i)
@@ -175,7 +182,7 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                 //collect path
                 size_t pstart = i;
                 for (; i < config_len; ++i)
-                    if (config_buf[i] == ';' && config_buf[i-1] != '\\')
+                    if (config_buf[i] == ';' && config_buf[i - 1] != '\\')
                         break;
                 //make sure they didnt screw up the config
                 if (i == config_len || config_buf[i] != ';') {
@@ -185,22 +192,35 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                 size_t pend = i;
 
                 if (button_mode == 'u') {
-                    if (!(lm[lm_len - 1].button_up[number] = strndup(config_buf + pstart, pend - pstart))) {
+                    if (!(lm[lm_len - 1].button_up[number]
+                            = strndup(config_buf + pstart, pend - pstart))) {
                         perror("strndup()");
                         goto error_cleanup;
                     }
-                    printf("binding '%s' to button %u up\n", lm[lm_len - 1].button_up[number], number);
+                    printf(
+                        "binding '%s' to button %u up\n", lm[lm_len - 1].button_up[number], number);
                 } else if (button_mode == 'd') {
-                    if (!(lm[lm_len - 1].button_down[number] = strndup(config_buf + pstart, pend - pstart))) {
+                    if (!(lm[lm_len - 1].button_down[number]
+                            = strndup(config_buf + pstart, pend - pstart))) {
                         perror("strndup()");
                         goto error_cleanup;
                     }
-                    printf("binding '%s' to button %u down\n", lm[lm_len - 1].button_down[number], number);
+                    printf("binding '%s' to button %u down\n", lm[lm_len - 1].button_down[number],
+                        number);
                 }
 
             } else {
                 fputs("unrecognized button directive\n", stderr);
             }
+            //who knows
+        } else if (!isspace(config_buf[i])) {
+            size_t pstart = i;
+            for (; i < config_len; ++i)
+                if (config_buf[i] == '\n')
+                    break;
+            size_t pend = i;
+            fprintf(stderr, "unrecognized directive '%.*s'\n", (int)(pend - pstart),
+                config_buf + pstart);
         }
     }
 
@@ -211,8 +231,7 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
 
 error_cleanup:
     if (lm_len) {
-        for (size_t i = 0; i < lm_len; ++i)
-            close_action_map(lm+i);
+        for (size_t i = 0; i < lm_len; ++i) close_action_map(lm + i);
         free(lm);
     }
     lm = NULL;
