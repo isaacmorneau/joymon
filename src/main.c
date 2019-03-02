@@ -9,8 +9,8 @@
 #include "config.h"
 #include "events.h"
 
-const char *config = NULL;
-bool config_needs_free  = false;
+const char *config     = NULL;
+bool config_needs_free = false;
 
 static void print_help(void) {
     puts(
@@ -77,6 +77,9 @@ int main(int argc, char **argv) {
     struct action_map *map = NULL;
     size_t total_actions   = 0;
     if (generate_map(config, &map, &total_actions)) {
+        if (map) {
+            free(map);
+        }
         printf("failed to generate action map, check config\n");
         exit(EXIT_FAILURE);
     }
@@ -91,6 +94,10 @@ int main(int argc, char **argv) {
 
     if (config_needs_free) {
         free((void *)config);
+    }
+
+    if (map) {
+        free(map);
     }
 
     exit(EXIT_SUCCESS);

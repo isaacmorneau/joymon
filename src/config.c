@@ -102,26 +102,46 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
             } else {
                 lm = tmp;
             }
+            //to gracefully free later
+            lm[lm_len-1].name = NULL;
 
             if (!(lm[lm_len - 1].name = strndup(config_buf + pstart, pend - pstart))) {
                 perror("strndup()");
                 goto error_cleanup;
-            }
-
-            if (!(lm[lm_len - 1].fd = open_joystick(lm[lm_len - 1].name))) {
+            } else if (!(lm[lm_len - 1].fd = open_joystick(lm[lm_len - 1].name))) {
                 goto error_cleanup;
-            }
-
-            if (!(lm[lm_len - 1].button_count= get_button_count(lm[lm_len - 1].fd))) {
+            } else if (!(lm[lm_len - 1].button_count = get_button_count(lm[lm_len - 1].fd))) {
                 goto error_cleanup;
-            }
-
-            if (!(lm[lm_len - 1].axis_count = get_axis_count(lm[lm_len - 1].fd))) {
+            } else if (!(lm[lm_len - 1].axis_count = get_axis_count(lm[lm_len - 1].fd))) {
                 goto error_cleanup;
             }
 
             printf("joystick: %s\nbuttons: %u axis: %u\n", lm[lm_len - 1].name,
                 lm[lm_len - 1].button_count, lm[lm_len - 1].axis_count);
+        } else if (!strncmp(config_buf+i, C_BUTTON, strlen(C_BUTTON))) {
+            //skip whitespace and token
+            for (i += strlen(C_BUTTON); i < config_len; ++i)
+                if (!isspace(config_buf[i]))
+                    break;
+
+            uint8_t number = 0;
+            if (sscanf(config_buf+i, "%hhu", &number) != 1) {
+                fputs("unspecified button number\n", stderr);
+                goto error_cleanup;
+            }
+
+            //go to the next token
+            for (i += strlen(C_BUTTON); i < config_len; ++i)
+                if (isalpha(config_buf[i]))
+                    break;
+            if (!strncmp(config_buf+i, C_DOWN, strlen(C_DOWN))) {
+                puts("button down");
+            } else if (!strncmp(config_buf+i, C_UP, strlen(C_UP))) {
+                puts("button up");
+            } else {
+                fputs("unspecified button event\n", stderr);
+                goto error_cleanup;
+            }
         }
     }
 
@@ -131,8 +151,13 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
     return 0;
 
 error_cleanup:
-    if (lm_len)
+    if (lm_len) {
+        for (size_t i = 0; i < lm_len; ++i)
+            if (lm[i].name)
+                free(lm[i].name);
         free(lm);
+    }
+    lm = NULL;
     free((void *)config_buf);
     return -1;
 }
