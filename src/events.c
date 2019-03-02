@@ -17,8 +17,16 @@ struct axis_state axes[3] = {{0}};
 
 void init_action_map(struct action_map *map) {
     if (!(map->button_down = calloc(sizeof(char *), map->button_count))
-        || !(map->button_up = calloc(sizeof(char *), map->button_count))) {
-        perror("malloc()");
+        || !(map->button_up = calloc(sizeof(char *), map->button_count))
+        || !(map->axis_x_neg = calloc(sizeof(char *), map->axis_count))
+        || !(map->axis_x_pos = calloc(sizeof(char *), map->axis_count))
+        || !(map->axis_y_neg = calloc(sizeof(char *), map->axis_count))
+        || !(map->axis_y_pos = calloc(sizeof(char *), map->axis_count))
+        || !(map->axis_x_neg_tol = calloc(sizeof(int16_t *), map->axis_count))
+        || !(map->axis_x_pos_tol = calloc(sizeof(int16_t *), map->axis_count))
+        || !(map->axis_y_neg_tol = calloc(sizeof(int16_t *), map->axis_count))
+        || !(map->axis_y_pos_tol = calloc(sizeof(int16_t *), map->axis_count))) {
+        perror("calloc()");
         exit(EXIT_FAILURE);
     }
 }
@@ -27,21 +35,60 @@ void close_action_map(struct action_map *map) {
     if (map->name) {
         free(map->name);
     }
-    if (map->button_up) {
-        for (size_t i = 0; i < map->button_count; ++i)
-            if (map->button_up[i])
-                free(map->button_up[i]);
+    for (size_t i = 0; i < map->button_count; ++i) {
+        if (map->button_up && map->button_up[i])
+            free(map->button_up[i]);
+        if (map->button_down && map->button_down[i])
+            free(map->button_down[i]);
+    }
 
+    if (map->button_up) {
         free(map->button_up);
         map->button_up = NULL;
     }
+
     if (map->button_down) {
-        for (size_t i = 0; i < map->button_count; ++i)
-            if (map->button_down[i])
-                free(map->button_down[i]);
         free(map->button_down);
         map->button_down = NULL;
     }
+
+    for (size_t i = 0; i < map->axis_count; ++i) {
+        if (map->axis_x_neg && map->axis_x_neg[i])
+            free(map->axis_x_neg[i]);
+        if (map->axis_x_pos && map->axis_x_pos[i])
+            free(map->axis_x_pos[i]);
+        if (map->axis_y_neg && map->axis_y_neg[i])
+            free(map->axis_y_neg[i]);
+        if (map->axis_y_pos && map->axis_y_pos[i])
+            free(map->axis_y_pos[i]);
+
+        if (map->axis_x_neg_tol && map->axis_x_neg_tol[i])
+            free(map->axis_x_neg_tol[i]);
+        if (map->axis_x_pos_tol && map->axis_x_pos_tol[i])
+            free(map->axis_x_pos_tol[i]);
+        if (map->axis_y_neg_tol && map->axis_y_neg_tol[i])
+            free(map->axis_y_neg_tol[i]);
+        if (map->axis_y_pos_tol && map->axis_y_pos_tol[i])
+            free(map->axis_y_pos_tol[i]);
+    }
+
+    if (map->axis_x_neg)
+        free(map->axis_x_neg);
+    if (map->axis_x_pos)
+        free(map->axis_x_pos);
+    if (map->axis_y_neg)
+        free(map->axis_y_neg);
+    if (map->axis_y_pos)
+        free(map->axis_y_pos);
+
+    if (map->axis_x_neg_tol)
+        free(map->axis_x_neg_tol);
+    if (map->axis_x_pos_tol)
+        free(map->axis_x_pos_tol);
+    if (map->axis_y_neg_tol)
+        free(map->axis_y_neg_tol);
+    if (map->axis_y_pos_tol)
+        free(map->axis_y_pos_tol);
 }
 
 uint8_t get_axis_count(int fd) {

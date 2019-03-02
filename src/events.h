@@ -9,6 +9,16 @@ struct action_map {
     int fd;
     char **button_down;
     char **button_up;
+
+    char **axis_x_neg;
+    char **axis_x_pos;
+    char **axis_y_neg;
+    char **axis_y_pos;
+
+    int16_t **axis_x_neg_tol;
+    int16_t **axis_x_pos_tol;
+    int16_t **axis_y_neg_tol;
+    int16_t **axis_y_pos_tol;
 };
 
 void init_action_map(struct action_map *map);

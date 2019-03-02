@@ -84,11 +84,6 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                 if (config_buf[i] == '\n')
                     break;
 
-        //skip whitespace
-        for (; i < config_len; ++i)
-            if (!isspace(config_buf[i]))
-                break;
-
         //joystick directive
         if (!strncmp(config_buf + i, C_JOYSTICK, strlen(C_JOYSTICK))) {
             //skip whitespace and token
@@ -168,9 +163,9 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                 goto error_cleanup;
             }
 
-            //remove whitespace
+            //go to the next token
             for (; i < config_len; ++i)
-                if (!isspace(config_buf[i]))
+                if (isalnum(config_buf[i]))
                     break;
 
             //extract command
@@ -191,20 +186,18 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                 }
                 size_t pend = i;
 
+                char *tmp;
+                if (!(tmp = strndup(config_buf + pstart, pend - pstart))) {
+                    perror("strndup()");
+                    goto error_cleanup;
+                }
+
                 if (button_mode == 'u') {
-                    if (!(lm[lm_len - 1].button_up[number]
-                            = strndup(config_buf + pstart, pend - pstart))) {
-                        perror("strndup()");
-                        goto error_cleanup;
-                    }
+                    lm[lm_len - 1].button_up[number] = tmp;
                     printf(
                         "binding '%s' to button %u up\n", lm[lm_len - 1].button_up[number], number);
                 } else if (button_mode == 'd') {
-                    if (!(lm[lm_len - 1].button_down[number]
-                            = strndup(config_buf + pstart, pend - pstart))) {
-                        perror("strndup()");
-                        goto error_cleanup;
-                    }
+                    lm[lm_len - 1].button_down[number] = tmp;
                     printf("binding '%s' to button %u down\n", lm[lm_len - 1].button_down[number],
                         number);
                 }
@@ -212,6 +205,112 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
             } else {
                 fputs("unrecognized button directive\n", stderr);
             }
+            //axis directive
+        } else if (!strncmp(config_buf + i, C_AXIS, strlen(C_AXIS))) {
+            //skip whitespace and token
+            for (i += strlen(C_AXIS); i < config_len; ++i)
+                if (!isspace(config_buf[i]))
+                    break;
+
+            //extract number
+            uint8_t number = 0;
+            if (sscanf(config_buf + i, "%hhu", &number) != 1) {
+                fputs("unspecified axis number\n", stderr);
+                goto error_cleanup;
+            }
+
+            //go to the next token
+            for (; i < config_len; ++i)
+                if (isalpha(config_buf[i]))
+                    break;
+
+            char axis_mode = 0;
+            //x or y
+            if (config_buf[i] == 'x') {
+                axis_mode = 'x';
+            } else if (config_buf[i] == 'y') {
+                axis_mode = 'y';
+            } else {
+                printf("%c\n", config_buf[i]);
+                fputs("unrecognized coord\n", stderr);
+                goto error_cleanup;
+            }
+
+            //we have the axis
+            ++i;
+
+            //go to the next token starts with - or alnum
+            for (; i < config_len; ++i)
+                if (isalnum(config_buf[i]) || config_buf[i] == '-')
+                    break;
+
+            int16_t *tolerance = malloc(sizeof(int16_t));
+            if (sscanf(config_buf + i, "%hd", tolerance) != 1) {
+                fputs("unspecified axis limit\n", stderr);
+                free(tolerance);
+                goto error_cleanup;
+            }
+
+            //go to the next token
+            for (; i < config_len; ++i)
+                if (isalpha(config_buf[i]))
+                    break;
+
+            //extract command
+            if (!strncmp(config_buf + i, C_EXEC, strlen(C_EXEC))) {
+                for (i += strlen(C_EXEC); i < config_len; ++i)
+                    if (!isspace(config_buf[i]))
+                        break;
+
+                //collect path
+                size_t pstart = i;
+                for (; i < config_len; ++i)
+                    if (config_buf[i] == ';' && config_buf[i - 1] != '\\')
+                        break;
+                //make sure they didnt screw up the config
+                if (i == config_len || config_buf[i] != ';') {
+                    fputs("unterminated button directive\n", stderr);
+                    goto error_cleanup;
+                }
+                size_t pend = i;
+
+                char *tmp;
+                if (!(tmp = strndup(config_buf + pstart, pend - pstart))) {
+                    perror("strndup()");
+                    goto error_cleanup;
+                }
+
+                if (axis_mode == 'x') {
+                    if (*tolerance < 0) {
+                        lm[lm_len - 1].axis_x_neg[number]     = tmp;
+                        lm[lm_len - 1].axis_x_neg_tol[number] = tolerance;
+                    } else if (*tolerance > 0) {
+                        lm[lm_len - 1].axis_x_pos[number]     = tmp;
+                        lm[lm_len - 1].axis_x_pos_tol[number] = tolerance;
+                    } else {
+                        fputs("cannot have 0 tolerance\n", stderr);
+                        free(tolerance);
+                        goto error_cleanup;
+                    }
+                    printf("binding '%s' axis %u x at %hd\n", tmp, number, *tolerance);
+                } else if (axis_mode == 'y') {
+                    if (*tolerance < 0) {
+                        lm[lm_len - 1].axis_y_neg[number]     = tmp;
+                        lm[lm_len - 1].axis_y_neg_tol[number] = tolerance;
+                    } else if (*tolerance > 0) {
+                        lm[lm_len - 1].axis_y_pos[number]     = tmp;
+                        lm[lm_len - 1].axis_y_pos_tol[number] = tolerance;
+                    } else {
+                        fputs("cannot have 0 tolerance\n", stderr);
+                        free(tolerance);
+                        goto error_cleanup;
+                    }
+                    printf("binding '%s' axis %u y at %hd\n", tmp, number, *tolerance);
+                }
+            } else {
+                fputs("unrecognized axis directive\n", stderr);
+            }
+
             //who knows
         } else if (isalnum(config_buf[i])) {
             size_t pstart = i;
