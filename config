@@ -1,8 +1,17 @@
+#to find the keys to bind to run ./joymon -r to print the values directly
 #main stick
 joystick /dev/input/js0;
+
+#axis number {x,y} threshold exec ...
+axis 2 x -1 exec i3-msg -t command 'focus left';
+axis 2 x 1 exec i3-msg -t command 'focus right';
+axis 2 y -1 exec i3-msg -t command 'focus up';
+axis 2 y 1 exec i3-msg -t command 'focus down';
+
 
 #throttle
 joystick /dev/input/js1;
 
+#button number {up,down} exec ...
 button 1 down exec i3-msg -t command 'workspace prev';
 button 2 down exec i3-msg -t command 'workspace next';

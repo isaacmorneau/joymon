@@ -250,6 +250,11 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                 free(tolerance);
                 goto error_cleanup;
             }
+            if (!*tolerance) {
+                fputs("cannot have 0 tolerance\n", stderr);
+                free(tolerance);
+                goto error_cleanup;
+            }
 
             //go to the next token
             for (; i < config_len; ++i)
@@ -287,10 +292,6 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                     } else if (*tolerance > 0) {
                         lm[lm_len - 1].axis_x_pos[number]     = tmp;
                         lm[lm_len - 1].axis_x_pos_tol[number] = tolerance;
-                    } else {
-                        fputs("cannot have 0 tolerance\n", stderr);
-                        free(tolerance);
-                        goto error_cleanup;
                     }
                     printf("binding '%s' axis %u x at %hd\n", tmp, number, *tolerance);
                 } else if (axis_mode == 'y') {
@@ -300,10 +301,6 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                     } else if (*tolerance > 0) {
                         lm[lm_len - 1].axis_y_pos[number]     = tmp;
                         lm[lm_len - 1].axis_y_pos_tol[number] = tolerance;
-                    } else {
-                        fputs("cannot have 0 tolerance\n", stderr);
-                        free(tolerance);
-                        goto error_cleanup;
                     }
                     printf("binding '%s' axis %u y at %hd\n", tmp, number, *tolerance);
                 }

@@ -199,13 +199,13 @@ void handle_event(struct js_event *event, struct action_map *restrict map, char 
             if (event->value) {
                 if (mode == 'r') {
                     printf("b%ud\n", event->number);
-                } else {
+                } else if (map->button_down[event->number]) {
                     system(map->button_down[event->number]);
                 }
             } else {
                 if (mode == 'r') {
                     printf("b%uu\n", event->number);
-                } else {
+                } else if (map->button_up[event->number]) {
                     system(map->button_up[event->number]);
                 }
             }
@@ -235,7 +235,17 @@ void handle_event(struct js_event *event, struct action_map *restrict map, char 
                         }
                     }
                 } else {
-                    //nothing yet but map to exec calls
+                    if (axes[axis].x < 0 && map->axis_x_neg_tol[axis] && axes[axis].x < *map->axis_x_neg_tol[axis]) {
+                        system(map->axis_x_neg[axis]);
+                    } else if (axes[axis].x > 0 && map->axis_x_pos_tol[axis] && axes[axis].x > *map->axis_x_pos_tol[axis]) {
+                        system(map->axis_x_pos[axis]);
+                    }
+
+                    if (axes[axis].y < 0 && map->axis_y_neg_tol[axis] && axes[axis].y < *map->axis_y_neg_tol[axis]) {
+                        system(map->axis_y_neg[axis]);
+                    } else if (axes[axis].y > 0 && map->axis_y_pos_tol[axis] && axes[axis].y > *map->axis_y_pos_tol[axis]) {
+                        system(map->axis_y_pos[axis]);
+                    }
                 }
             }
             break;
