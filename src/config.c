@@ -213,7 +213,7 @@ int generate_map(const char *config, struct action_map **map, size_t *total_acti
                 fputs("unrecognized button directive\n", stderr);
             }
             //who knows
-        } else if (!isspace(config_buf[i])) {
+        } else if (isalnum(config_buf[i])) {
             size_t pstart = i;
             for (; i < config_len; ++i)
                 if (config_buf[i] == '\n')
