@@ -15,9 +15,9 @@ bool config_needs_free = false;
 static void print_help(void) {
     puts(
         "joymon - a simple daemon to respond to joystick events\n"
-        "-[-i]nterface - the /dev/input/js# device to read from. can be specificed multiple times\n"
         "-[-d]aemonize - run in the background\n"
         "-[-r]aw - dump all event information to the console. useful for finding keycodes\n"
+        "-[-t]est - run as normal but dont daemonize. useful for finding command errors\n"
         "-[-c]onfig - defaults to XDG_CONFIG_HOME/joymon/config\n"
         "-[-h]elp - this message");
 }

@@ -59,9 +59,9 @@ if you feel the need to comment you can
 
 ```
 joymon - a simple daemon to respond to joystick events
--[-i]nterface - the /dev/input/js# device to read from. can be specificed multiple times
 -[-d]aemonize - run in the background
 -[-r]aw - dump all event information to the console. useful for finding keycodes
+-[-t]est - run as normal but dont daemonize. useful for finding command errors
 -[-c]onfig - defaults to XDG_CONFIG_HOME/joymon/config
 -[-h]elp - this message
 ```
