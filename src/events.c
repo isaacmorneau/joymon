@@ -172,7 +172,7 @@ void listen_to_joystick(struct action_map *restrict map, char mode) {
     button_count = get_button_count(map->fd);
 
     if (mode == 'r') {
-        printf("joystock: %s\naxis count: %u\nbutton count: %u\n", map->name, axis_count,
+        printf("joystick: %s\naxis count: %u\nbutton count: %u\n", map->name, axis_count,
             button_count);
     }
 
